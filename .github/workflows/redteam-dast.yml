@@ -35,7 +35,7 @@ jobs:
           --health-cmd "pg_isready -U app" --health-interval 5s --health-timeout 5s --health-retries 10
     env:
       DATABASE_URL: postgresql://app:ci-only-password@localhost:5432/app
-      NODE_ENV: production
+      # 不在這裡設 NODE_ENV=production：會讓 npm ci 略過 devDependencies。next build / next start 會自行設定。
       APP_ORIGIN: https://localhost:3000
       WEBAUTHN_RP_ID: localhost
       # 只在這個臨時測試環境放寬速率限制，讓模糊測試能打到業務邏輯
