@@ -10,6 +10,7 @@ import { SAFE_METHODS, clientIp, isSameOrigin } from "@/lib/request";
 import { getSessionUser, type SessionUser } from "@/lib/auth/session";
 import { hasPermission, type Permission } from "@/lib/authz";
 import { audit } from "@/lib/audit";
+import { containsNul } from "@/lib/validation";
 
 const MAX_JSON_BYTES = 64 * 1024;
 
@@ -114,6 +115,7 @@ export function secureRoute<
         } catch {
           throw Errors.badRequest();
         }
+        if (containsNul(json)) throw Errors.badRequest();
         const parsed = opts.body.safeParse(json);
         if (!parsed.success) {
           throw Errors.badRequest(parsed.error.issues.map((i) => ({ path: i.path.join("."), code: i.code })));

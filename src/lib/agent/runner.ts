@@ -2,6 +2,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { hasPermission } from "@/lib/authz";
 import { redactAll, redactSecrets } from "@/lib/redact";
 import { detectInjectionSignals, wrapUntrusted } from "@/lib/agent/untrusted";
+import { containsNul } from "@/lib/validation";
 import type { ToolContext, ToolRegistry } from "@/lib/agent/tools";
 
 type BetaMessage = Anthropic.Beta.Messages.BetaMessage;
@@ -128,8 +129,8 @@ export async function runAgent(opts: {
     }
 
     // 3. 輸入驗證
-    const parsed = tool.input.safeParse(call.input);
-    if (!parsed.success) return deny("invalid_input", "工具參數格式不正確。");
+    const parsed = containsNul(call.input) ? null : tool.input.safeParse(call.input);
+    if (!parsed?.success) return deny("invalid_input", "工具參數格式不正確。");
 
     // 4. 高風險 → 只建立待確認請求（Human-in-the-loop）
     if (tool.risk === "high") {
