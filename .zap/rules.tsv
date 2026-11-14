@@ -2,3 +2,4 @@
 # 預設所有警告都會讓工作失敗（fail_action: true）。只有確認為誤判、且寫下理由時才可設為 IGNORE。
 10049	IGNORE	(Storable and Cacheable Content) API 已設 Cache-Control: no-store；靜態資源可快取屬預期
 10109	IGNORE	(Modern Web Application) 資訊性提示，非弱點
+90005	IGNORE	(Sec-Fetch-Dest Header is Missing) 檢查的是「請求」是否帶 Sec-Fetch-*，屬於掃描器自身請求的特性；伺服器端以 Origin / Sec-Fetch-Site 做 CSRF 防護

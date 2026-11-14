@@ -35,6 +35,8 @@ export const STATIC_SECURITY_HEADERS: Array<{ key: string; value: string }> = [
     value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
   },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  // 只允許載入同源或明確允許跨源的資源（隔離 Spectre 類側通道攻擊）；需要嵌入第三方資源時再調整
+  { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
   { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
   { key: "X-DNS-Prefetch-Control", value: "off" },
   { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
