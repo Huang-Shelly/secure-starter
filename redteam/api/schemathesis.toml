@@ -1,0 +1,21 @@
+# Schemathesis（API 模糊測試）設定
+# Session token 由 CI 以測試資料庫建立，透過環境變數注入
+[auth.openapi.session]
+api_key = "${SESSION_TOKEN}"
+
+[headers]
+Origin = "${APP_ORIGIN}"
+
+[generation]
+max-examples = 30
+
+# 已知框架行為：Next.js 對 TRACE/TRACK 在進入應用程式前就回 500（回應不含任何內部資訊）。
+# 請在 CDN / 反向代理層封鎖這些方法（見 docs/red-team-playbook.md「已知議題」）。
+# 其他未宣告的方法 Next.js 會回 405，但不帶 Allow 標頭（低風險），CI 以 --exclude-checks unsupported_method 略過該檢查。
+[phases.coverage]
+unexpected-methods = ["get", "put", "post", "delete", "options", "patch"]
+
+# CI 中沒有設定 ANTHROPIC_API_KEY，AI Agent 端點依設計回 503
+[[operations]]
+include-name = "POST /api/agent"
+checks.not_a_server_error.expected-statuses = ["2xx", "3xx", "4xx", "503"]

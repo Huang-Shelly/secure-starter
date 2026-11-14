@@ -1,0 +1,16 @@
+# gitleaks 設定：沿用官方預設規則，額外加上 Anthropic 金鑰規則
+[extend]
+useDefault = true
+
+[[rules]]
+id = "anthropic-api-key"
+description = "Anthropic API key"
+regex = '''sk-ant-[a-zA-Z0-9_-]{20,}'''
+tags = ["key", "anthropic"]
+
+[allowlist]
+description = "範例檔與測試中的假資料"
+paths = [
+  '''\.env\.example$''',
+  '''^tests/''',
+]
