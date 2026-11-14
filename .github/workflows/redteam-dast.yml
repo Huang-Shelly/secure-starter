@@ -100,9 +100,10 @@ jobs:
           allow_issue_writing: false
           fail_action: true
           artifact_name: zap-api-scan
-          # 以替換器帶入測試 session 與同源 Origin，讓主動掃描能打到需要登入的端點
+          # -O：規格檔由 8090 的臨時伺服器提供，但要攻擊的是 3000 的 App（否則會掃到規格伺服器本身）
+          # -z 替換器：帶入測試 session 與同源 Origin，讓主動掃描能打到需要登入的端點
           cmd_options: >-
-            -a -z "-config replacer.full_list(0).description=session
+            -a -O http://localhost:3000 -z "-config replacer.full_list(0).description=session
             -config replacer.full_list(0).enabled=true
             -config replacer.full_list(0).matchtype=REQ_HEADER
             -config replacer.full_list(0).matchstr=Cookie
