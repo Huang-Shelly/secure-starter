@@ -40,7 +40,8 @@ jobs:
       - name: SCA - 已知漏洞（高風險以上就失敗）
         run: npm audit --audit-level=high
       - name: SCA - 驗證套件簽章與來源證明
-        run: npm audit signatures
+        # Node 22 內建的 npm 10 認不得較新的來源證明金鑰，改用固定版本的 npm 11 驗證
+        run: npx -y npm@11.21.2 audit signatures
 
   semgrep:
     name: SAST (Semgrep)
