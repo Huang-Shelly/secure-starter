@@ -1,0 +1,113 @@
+// 資料模型：所有使用者資料都帶 ownerId，查詢時一律以 ownerId 範圍化（防 IDOR）。
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id          String       @id @default(uuid()) @db.Uuid
+  username    String       @unique @db.VarChar(64)
+  displayName String       @db.VarChar(100)
+  role        Role         @default(USER)
+  createdAt   DateTime     @default(now())
+  credentials Credential[]
+  sessions    Session[]
+  notes       Note[]
+  pendingActions PendingAction[]
+}
+
+// Passkey（WebAuthn）憑證：只存公鑰，不存任何密碼
+model Credential {
+  id           String   @id // base64url credential ID
+  userId       String   @db.Uuid
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  publicKey    Bytes
+  counter      BigInt   @default(0)
+  transports   String[]
+  deviceType   String   @db.VarChar(32)
+  backedUp     Boolean
+  createdAt    DateTime @default(now())
+  lastUsedAt   DateTime?
+
+  @@index([userId])
+}
+
+// Session：Cookie 內放隨機 token，資料庫只存其 SHA-256 雜湊；可撤銷、短效
+model Session {
+  id          String   @id @default(uuid()) @db.Uuid
+  tokenHash   String   @unique @db.Char(64)
+  userId      String   @db.Uuid
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  userAgent   String?  @db.VarChar(256)
+
+  @@index([userId])
+}
+
+// WebAuthn challenge：一次性、5 分鐘過期
+model AuthChallenge {
+  id        String   @id @default(uuid()) @db.Uuid
+  challenge String   @db.VarChar(256)
+  purpose   String   @db.VarChar(16) // "register" | "login"
+  username  String?  @db.VarChar(64)
+  displayName String? @db.VarChar(100)
+  subjectId String?  @db.Uuid // 註冊時預先產生的使用者 ID（WebAuthn user handle）
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+// 範例資源：示範擁有者授權（IDOR 防護）
+model Note {
+  id        String   @id @default(uuid()) @db.Uuid
+  ownerId   String   @db.Uuid
+  owner     User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  title     String   @db.VarChar(200)
+  body      String   @db.VarChar(10000)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+}
+
+// AI Agent 高風險操作：先存成待確認，必須由同一位使用者明確核准才執行
+model PendingAction {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  toolName   String    @db.VarChar(64)
+  input      Json
+  summary    String    @db.VarChar(500)
+  status     String    @default("pending") @db.VarChar(16) // pending | approved | rejected | expired
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
+  decidedAt  DateTime?
+
+  @@index([userId, status])
+}
+
+// 稽核日誌：只記事件與中繼資料，不記敏感內容
+model AuditLog {
+  id        BigInt   @id @default(autoincrement())
+  at        DateTime @default(now())
+  actorId   String?  @db.Uuid
+  action    String   @db.VarChar(64)
+  target    String?  @db.VarChar(128)
+  outcome   String   @db.VarChar(16) // success | denied | error
+  ip        String?  @db.VarChar(64)
+  meta      Json?
+
+  @@index([actorId, at])
+  @@index([action, at])
+}

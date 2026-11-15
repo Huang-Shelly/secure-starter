@@ -1,0 +1,102 @@
+# 每次 push / PR：品質檢查 + SAST + SCA + Secret 掃描
+# 所有第三方 Action 都釘選到 commit SHA（防止 tag 被竄改的供應鏈攻擊），Dependabot 會自動更新。
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint / Typecheck / Test / Build / SCA
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # 建置時不連資料庫，只給 prisma generate 一個假的連線字串
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: SCA - 已知漏洞（高風險以上就失敗）
+        run: npm audit --audit-level=high
+      - name: SCA - 驗證套件簽章與來源證明
+        # Node 22 內建的 npm 10 認不得較新的來源證明金鑰，改用固定版本的 npm 11 驗證
+        run: npx -y npm@11.21.2 audit signatures
+
+  semgrep:
+    name: SAST (Semgrep)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - run: pip install semgrep==1.180.0
+      - name: Semgrep scan
+        run: |
+          semgrep scan --metrics=off --error \
+            --config p/owasp-top-ten \
+            --config p/typescript \
+            --config p/react \
+            --config p/nodejsscan \
+            --config p/jwt \
+            --exclude-rule typescript.react.portability.i18next.jsx-not-internationalized \
+            --exclude src/generated --exclude tests --exclude redteam/llm
+
+  secrets:
+    name: Secret 掃描 (gitleaks)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read # gitleaks-action 需要讀取 PR 的 commit 清單
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  dependency-review:
+    name: 相依套件審查（PR）
+    # Dependency Review 在私有 repo 需要 GitHub Advanced Security；公開 repo 免費
+    if: github.event_name == 'pull_request' && !github.event.repository.private
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: moderate
+          comment-summary-in-pr: on-failure
+          deny-licenses: AGPL-3.0, GPL-3.0

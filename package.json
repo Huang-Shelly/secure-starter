@@ -1,0 +1,55 @@
+{
+  "name": "secure-starter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:migrate:dev": "prisma migrate dev",
+    "redteam:llm": "vitest run --config redteam/llm/vitest.config.ts",
+    "check": "npm run lint && npm run typecheck && npm run test",
+    "redteam:api": "st --config-file redteam/api/schemathesis.toml run redteam/api/openapi.yaml --url ${APP_URL:-http://localhost:3000} --checks all --exclude-checks unsupported_method"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "1.6.0",
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "@simplewebauthn/browser": "13.3.0",
+    "@simplewebauthn/server": "13.3.3",
+    "next": "16.4.4",
+    "pg": "8.23.1",
+    "react": "19.2.9",
+    "react-dom": "19.2.9",
+    "server-only": "0.0.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.1",
+    "@types/pg": "8.15.6",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "dotenv": "17.2.3",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.4.4",
+    "prisma": "7.10.1",
+    "typescript": "5.9.3",
+    "vite": "7.3.7",
+    "vitest": "4.1.12"
+  },
+  "overrides": {
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "11.0.8"
+    }
+  }
+}

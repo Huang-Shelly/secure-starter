@@ -1,0 +1,5 @@
+# 安全相關檔案的變更需要擁有者審查（搭配分支保護「Require review from Code Owners」）
+*                       @Huang-Shelly
+/src/lib/               @Huang-Shelly
+/.github/               @Huang-Shelly
+/prisma/                @Huang-Shelly

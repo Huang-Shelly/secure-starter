@@ -1,0 +1,11 @@
+# ZAP 規則設定：<rule id>	<IGNORE|WARN|FAIL>	<說明>
+# OUTOFSCOPE 列的第三欄是 URL 正規表示式：該規則只對符合的 URL 不計，其他 URL 照常把關。
+# 預設所有警告都會讓工作失敗（fail_action: true）。只有確認為誤判、且寫下理由時才可設為 IGNORE。
+10049	IGNORE	(Storable and Cacheable Content) API 已設 Cache-Control: no-store；靜態資源可快取屬預期
+10109	IGNORE	(Modern Web Application) 資訊性提示，非弱點
+90005	IGNORE	(Sec-Fetch-Dest Header is Missing) 檢查的是「請求」是否帶 Sec-Fetch-*，屬於掃描器自身請求的特性；伺服器端以 Origin / Sec-Fetch-Site 做 CSRF 防護
+40014	IGNORE	(XSS Weakness, Persistent in JSON Response) 回應為 application/json + nosniff，前端以 React 文字節點呈現、禁止 dangerouslySetInnerHTML；真正的儲存型 XSS 由 40016/40017 檢查
+# 100000：未設 ANTHROPIC_API_KEY 時 /api/agent 刻意回 503（功能停用），其他路徑的 5xx 仍會讓掃描失敗
+100000	OUTOFSCOPE	.*/api/agent/?$
+# 100001：API 掃描預期 JSON；/api/ 以外是 HTML 頁面屬正常。/api/* 一律回 JSON（含未定義路徑的 404）
+100001	OUTOFSCOPE	^(?!.*/api/).*$

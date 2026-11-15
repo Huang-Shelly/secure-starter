@@ -1,0 +1,41 @@
+# LLM 紅隊測試：用真的模型對 AI Agent 跑 Prompt Injection / 越獄回歸測試
+# 需要在 repo Secrets 設定 ANTHROPIC_API_KEY；未設定時測試會自動略過。
+# 為了控制成本，只在排程、手動觸發，或 PR 修改到 Agent 相關程式時執行。
+name: Red Team - LLM Prompt Injection
+
+on:
+  schedule:
+    - cron: "17 4 * * 1" # 每週一
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "src/lib/agent/**"
+      - "redteam/llm/**"
+
+permissions:
+  contents: read
+
+jobs:
+  llm-redteam:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: 執行 Prompt Injection / 越獄測試
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          AGENT_MODEL: claude-opus-5-5
+        run: npm run redteam:llm
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: llm-redteam-report
+          path: reports/llm-redteam.xml
+          retention-days: 30
